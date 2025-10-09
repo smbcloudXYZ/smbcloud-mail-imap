@@ -1,6 +1,6 @@
-use futures::{SinkExt, StreamExt, stream::iter};
-use tokio::net::TcpStream;
-use tokio_util::codec::{Framed, LinesCodec, LinesCodecError};
+use futures::{StreamExt};
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio_util::codec::{Framed, LinesCodec};
 
 use crate::send_commands::send_commands;
 
@@ -10,7 +10,10 @@ enum SmtpState {
     Quit,
 }
 
-pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
+pub async fn handle_session<S>(stream: S) -> anyhow::Result<()>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
     let RE_SMTP_MAIL = regex::Regex::new(r"(?i)from: ?<(.+)>").unwrap();
     let RE_SMTP_RCPT = regex::Regex::new(r"(?i)to: ?<(.+)>").unwrap();
     let mut message = String::new();
