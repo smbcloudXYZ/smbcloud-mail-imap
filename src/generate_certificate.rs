@@ -3,8 +3,8 @@ use openssl::{
     pkey::PKey,
     rsa::Rsa,
     x509::{
-        X509, X509NameBuilder,
         extension::{AuthorityKeyIdentifier, BasicConstraints, SubjectKeyIdentifier},
+        X509NameBuilder, X509,
     },
 };
 

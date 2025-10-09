@@ -1,4 +1,4 @@
-use futures::{SinkExt, StreamExt, stream::iter};
+use futures::{stream::iter, SinkExt, StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{Framed, LinesCodec};
 

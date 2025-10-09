@@ -1,8 +1,7 @@
+use crate::{generate_certificate::generate_certificate, handle_session::handle_session};
 use native_tls::{Identity, TlsAcceptor};
 use tokio::net::TcpStream;
 use tokio_native_tls::TlsAcceptor as TokioTlsAcceptor;
-
-use crate::{generate_certificate::generate_certificate, handle_session::handle_session};
 
 pub async fn handle_starttls(stream: &mut TcpStream) -> anyhow::Result<()> {
     // ideally the certificate should only be loaded from here and not generated each time
