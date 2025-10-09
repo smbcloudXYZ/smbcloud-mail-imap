@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::handle_session::handle_session;
+use crate::handle_unsecured_session::handle_unsecured_session;
 
 pub async fn listen() -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 2525));
@@ -30,6 +30,6 @@ async fn handle_connection(stream: &mut TcpStream) -> anyhow::Result<()> {
     // Send greeting
     stream.write_all(b"220 My SMTP server\r\n").await?;
     
-    // Handle the session
-    handle_session(stream).await
+    // Handle unsecured session (STARTTLS negotiation happens here)
+    handle_unsecured_session(stream).await
 }

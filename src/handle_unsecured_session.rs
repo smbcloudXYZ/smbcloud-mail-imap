@@ -54,6 +54,10 @@ pub async fn handle_unsecured_session(
         line.clear();
     }
 
+    // Drop the reader and writer to release the borrow on stream
+    drop(reader);
+    drop(writer);
+
     if is_tls {
         handle_starttls(stream).await?;
     }
