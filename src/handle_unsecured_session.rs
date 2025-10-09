@@ -3,7 +3,7 @@ use tokio::{
     net::TcpStream,
 };
 
-use crate::handle_starttls;
+// use crate::handle_starttls;
 
 async fn handle_unsecured_session(
     reader: &mut BufReader<TcpStream>,
@@ -53,6 +53,9 @@ async fn handle_unsecured_session(
     }
 
     if is_tls {
-        handle_starttls(stream).await?
+        // handle_starttls(stream).await?;
+        tracing::info!("STARTTLS requested but not implemented in this session handler");
     }
+    
+    Ok(())
 }

@@ -1,6 +1,6 @@
-use futures::{SinkExt, StreamExt, stream::iter};
+use futures::StreamExt;
 use tokio::net::TcpStream;
-use tokio_util::codec::{Framed, LinesCodec, LinesCodecError};
+use tokio_util::codec::{Framed, LinesCodec};
 
 use crate::send_commands::send_commands;
 
@@ -10,7 +10,7 @@ enum SmtpState {
     Quit,
 }
 
-pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
+pub async fn handle_session(stream: TcpStream) -> anyhow::Result<()> {
     let RE_SMTP_MAIL = regex::Regex::new(r"(?i)from: ?<(.+)>").unwrap();
     let RE_SMTP_RCPT = regex::Regex::new(r"(?i)to: ?<(.+)>").unwrap();
     let mut message = String::new();
@@ -106,8 +106,12 @@ pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
                     message = String::new();
                     state = SmtpState::Command;
                     // we can now handle the email:
-                    //handle_email(mailfrom, rcpts, message);
-                    panic!()
+                    tracing::info!(
+                        "Received email from {} to {:?} with {} bytes",
+                        mailfrom.as_ref().unwrap_or(&"<unknown>".to_string()),
+                        rcpts,
+                        message.len()
+                    );
                 } else {
                     // Add the received line to the email content
                     message.push_str(&line);

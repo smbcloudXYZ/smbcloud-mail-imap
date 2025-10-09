@@ -1,6 +1,5 @@
 use futures::{SinkExt, StreamExt, stream::iter};
 use tokio::net::TcpStream;
-use tokio_native_tls::TlsStream;
 use tokio_util::codec::{Framed, LinesCodec};
 
 pub async fn send_commands(

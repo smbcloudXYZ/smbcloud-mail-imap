@@ -38,9 +38,11 @@ pub fn generate_certificate() -> anyhow::Result<(String, String)> {
         let c = builder.build();
         Ok((c.to_pem()?, pkey.private_key_to_pem_pkcs8()?))
     };
-    let (pem_certificate, pem_private_key) = cert_result
-        .as_ref()
-        .map_err(|e| anyhow::anyhow!("Could not generate self-signed certificates: {}", e))?;
+    let (pem_certificate, pem_private_key): (Vec<u8>, Vec<u8>) = cert_result
+        .map_err(|e: openssl::error::ErrorStack| anyhow::anyhow!("Could not generate self-signed certificates: {}", e))?;
+
+    let pem_certificate = String::from_utf8(pem_certificate)?;
+    let pem_private_key = String::from_utf8(pem_private_key)?;
 
     Ok((pem_certificate, pem_private_key))
 }
