@@ -12,9 +12,9 @@ pub async fn listen() -> anyhow::Result<()> {
 
     loop {
         match listener.accept().await {
-            Ok((stream, _)) => {
+            Ok((mut stream, _)) => {
                 tokio::spawn(async move {
-                    if let Err(err) = handle_connection(stream).await {
+                    if let Err(err) = handle_connection(&mut stream).await {
                         tracing::error!("Error handling SMTP connection: {:?}", err);
                     };
                 });
@@ -26,12 +26,10 @@ pub async fn listen() -> anyhow::Result<()> {
     }
 }
 
-async fn handle_connection(mut stream: TcpStream) -> anyhow::Result<()> {
-    // Send initial greeting
+async fn handle_connection(stream: &mut TcpStream) -> anyhow::Result<()> {
+    // Send greeting
     stream.write_all(b"220 My SMTP server\r\n").await?;
-    stream.flush().await?;
-
+    
     // Handle unsecured session which will handle STARTTLS
-    handle_unsecured_session(stream).await?;
-    Ok(())
+    handle_unsecured_session(stream).await
 }

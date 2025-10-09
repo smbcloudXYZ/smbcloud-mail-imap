@@ -1,13 +1,16 @@
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
     net::TcpStream,
 };
 
 use crate::handle_starttls::handle_starttls;
 
-pub async fn handle_unsecured_session(stream: TcpStream) -> anyhow::Result<()> {
-    let mut reader = BufReader::new(stream);
-    
+pub async fn handle_unsecured_session(
+    stream: &mut TcpStream,
+) -> anyhow::Result<()> {
+    let (reader, writer) = stream.split();
+    let mut reader = BufReader::new(reader);
+    let mut writer = BufWriter::new(writer);
     let mut is_tls = false;
     let mut line = String::new();
     while reader.read_line(&mut line).await? != 0 {
@@ -16,41 +19,35 @@ pub async fn handle_unsecured_session(stream: TcpStream) -> anyhow::Result<()> {
 
         match command.trim().to_uppercase().as_ref() {
             "EHLO" | "HELO" => {
-                let stream = reader.get_mut();
-                stream.write_all(b"250-windmill Hello\r\n").await?;
-                stream.write_all(b"250-STARTTLS\r\n").await?;
-                stream.write_all(b"250 What you've got?\r\n").await?;
-                stream.flush().await?;
+                writer.write_all(b"250-windmill Hello\r\n").await?;
+                writer.write_all(b"250-STARTTLS\r\n").await?;
+                writer.write_all(b"250 What you've got?\r\n").await?;
+                writer.flush().await?;
             }
             "STARTTLS" => {
-                let stream = reader.get_mut();
-                stream.write_all(b"220 GO ON\r\n").await?;
-                stream.flush().await?;
+                writer.write_all(b"220 GO ON\r\n").await?;
+                writer.flush().await?;
                 is_tls = true;
                 break;
             }
             "QUIT" => {
-                let stream = reader.get_mut();
-                stream.write_all(b"221 Have a nice day!\r\n").await?;
-                stream.flush().await?;
+                writer.write_all(b"221 Have a nice day!\r\n").await?;
+                writer.flush().await?;
                 break;
             }
             "NOOP" => {
-                let stream = reader.get_mut();
-                stream.write_all(b"250 OK\r\n").await?;
-                stream.flush().await?;
+                writer.write_all(b"250 OK\r\n").await?;
+                writer.flush().await?;
             }
             "MAIL" | "RCPT" | "DATA" | "RSET" => {
-                let stream = reader.get_mut();
-                stream
+                writer
                     .write_all(b"530 Must issue a STARTTLS command first\r\n")
                     .await?;
-                stream.flush().await?;
+                writer.flush().await?;
             }
             _ => {
-                let stream = reader.get_mut();
-                stream.write_all(b"500 Unknown command\r\n").await?;
-                stream.flush().await?;
+                writer.write_all(b"500 Unknown command\r\n").await?;
+                writer.flush().await?;
             }
         }
 
@@ -58,8 +55,6 @@ pub async fn handle_unsecured_session(stream: TcpStream) -> anyhow::Result<()> {
     }
 
     if is_tls {
-        // Extract the stream from the BufReader for TLS handshake
-        let stream = reader.into_inner();
         handle_starttls(stream).await?;
     }
     

@@ -5,5 +5,6 @@ use smbcloud_mail::listen::listen;
 async fn main() -> Result<()> {
     // Initialize tracing subscriber for logging
     tracing_subscriber::fmt::init();
+    
     listen().await
 }

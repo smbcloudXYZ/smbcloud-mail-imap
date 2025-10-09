@@ -103,14 +103,20 @@ where
                 if line.trim() == "." {
                     // The end of the email content has been received
                     send_commands(&mut framed, vec!["250 OK".to_string()]).await?;
+                    
+                    // Log the received email
+                    tracing::info!(
+                        "Email received - From: {:?}, To: {:?}, Size: {} bytes",
+                        mailfrom,
+                        rcpts,
+                        message.len()
+                    );
+                    
                     // reset the state and variables for the next email
                     mailfrom = None;
                     rcpts = Vec::new();
                     message = String::new();
                     state = SmtpState::Command;
-                    // we can now handle the email:
-                    //handle_email(mailfrom, rcpts, message);
-                    panic!()
                 } else {
                     // Add the received line to the email content
                     message.push_str(&line);
