@@ -1,0 +1,15 @@
+[package]
+name = "smbcloud-mail"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { version = "1", features = [ "macros","io-util","net","rt", "rt-multi-thread"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tokio-native-tls = "0.3"
+native-tls = "0.2"
+anyhow = "1"
+tracing = "0.1"
+regex = "1"
+futures = "0.3"
+openssl = "0.10"
