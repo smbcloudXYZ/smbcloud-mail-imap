@@ -9,7 +9,7 @@ use openssl::{
 };
 
 pub fn generate_certificate() -> anyhow::Result<(String, String)> {
-    let cert_result = {
+    let cert_result: Result<(Vec<u8>, Vec<u8>), openssl::error::ErrorStack> = {
         let rsa = Rsa::generate(4096)?;
         let pkey = PKey::from_rsa(rsa)?;
         let mut name = X509NameBuilder::new()?;
@@ -38,9 +38,10 @@ pub fn generate_certificate() -> anyhow::Result<(String, String)> {
         let c = builder.build();
         Ok((c.to_pem()?, pkey.private_key_to_pem_pkcs8()?))
     };
-    let (pem_certificate, pem_private_key) = cert_result
-        .as_ref()
-        .map_err(|e| anyhow::anyhow!("Could not generate self-signed certificates: {}", e))?;
+    let (pem_certificate, pem_private_key) = cert_result?;
 
-    Ok((pem_certificate, pem_private_key))
+    Ok((
+        String::from_utf8_lossy(&pem_certificate).to_string(),
+        String::from_utf8_lossy(&pem_private_key).to_string(),
+    ))
 }
