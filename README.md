@@ -31,7 +31,7 @@ A basic SMTP and IMAP server implementation in Rust with TLS/STARTTLS support.
 cargo run
 ```
 
-The SMTP server listens on `127.0.0.1:2525` and the IMAP server listens on `127.0.0.1:143` by default.
+The SMTP server listens on `127.0.0.1:2525` and the IMAP server listens on `127.0.0.1:1143` by default.
 
 ## Testing
 
@@ -49,10 +49,10 @@ You can test the IMAP server using `nc` (netcat) or `telnet`:
 
 ```bash
 # Connect and login
-echo -e "a1 CAPABILITY\r\na2 LOGIN user pass\r\na3 LIST \"\" \"*\"\r\na4 SELECT INBOX\r\na5 LOGOUT\r\n" | nc localhost 143
+echo -e "a1 CAPABILITY\r\na2 LOGIN user pass\r\na3 LIST \"\" \"*\"\r\na4 SELECT INBOX\r\na5 LOGOUT\r\n" | nc localhost 1143
 
 # Fetch messages
-echo -e "a1 LOGIN user pass\r\na2 SELECT INBOX\r\na3 FETCH 1 (FLAGS BODY[])\r\na4 LOGOUT\r\n" | nc localhost 143
+echo -e "a1 LOGIN user pass\r\na2 SELECT INBOX\r\na3 FETCH 1 (FLAGS BODY[])\r\na4 LOGOUT\r\n" | nc localhost 1143
 ```
 
 ## Supported Commands

@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 
 pub async fn listen(store: Arc<MailboxStore>) -> anyhow::Result<()> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 143));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 1143));
     let listener = TcpListener::bind(addr).await?;
 
     tracing::info!("IMAP server listening on {}", addr);
