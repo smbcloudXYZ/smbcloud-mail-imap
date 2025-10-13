@@ -52,7 +52,9 @@ where
                         } else if parts.len() < 2 {
                             send_commands(&mut framed, vec!["-ERR Password required".to_string()]).await?;
                         } else {
-                            // Simple authentication - accept any password for now
+                            // SECURITY NOTE: For demonstration purposes only - accepts any password
+                            // In production, implement proper authentication against a user database
+                            // with securely hashed passwords
                             let user = username.clone().unwrap();
                             authenticated_user = Some(user.clone());
                             
@@ -65,8 +67,6 @@ where
                         send_commands(&mut framed, vec![
                             "+OK Capability list follows".to_string(),
                             "USER".to_string(),
-                            "UIDL".to_string(),
-                            "TOP".to_string(),
                             ".".to_string(),
                         ]).await?;
                     }
@@ -175,8 +175,6 @@ where
                         send_commands(&mut framed, vec![
                             "+OK Capability list follows".to_string(),
                             "USER".to_string(),
-                            "UIDL".to_string(),
-                            "TOP".to_string(),
                             ".".to_string(),
                         ]).await?;
                     }

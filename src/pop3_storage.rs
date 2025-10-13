@@ -71,11 +71,9 @@ impl Pop3Mailbox {
     pub fn delete_marked(&self, username: &str) {
         let mut messages = self.messages.lock().unwrap();
         if let Some(user_messages) = messages.get_mut(username) {
+            // Delete marked messages without re-indexing
+            // This preserves message IDs for any remaining messages
             user_messages.retain(|m| !m.deleted);
-            // Re-index messages after deletion
-            for (idx, msg) in user_messages.iter_mut().enumerate() {
-                msg.id = idx + 1;
-            }
         }
     }
 
