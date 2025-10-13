@@ -1,8 +1,8 @@
-use futures::{SinkExt, StreamExt, stream::iter};
-use tokio::net::TcpStream;
-use tokio_util::codec::{Framed, LinesCodec, LinesCodecError};
-
 use crate::send_commands::send_commands;
+use crate::storage::MessageStorage;
+use futures::StreamExt;
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio_util::codec::{Framed, LinesCodec};
 
 enum SmtpState {
     Command,
@@ -10,9 +10,12 @@ enum SmtpState {
     Quit,
 }
 
-pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
-    let RE_SMTP_MAIL = regex::Regex::new(r"(?i)from: ?<(.+)>").unwrap();
-    let RE_SMTP_RCPT = regex::Regex::new(r"(?i)to: ?<(.+)>").unwrap();
+pub async fn handle_session<S>(stream: S, storage: Option<MessageStorage>) -> anyhow::Result<()>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
+    let re_smtp_mail = regex::Regex::new(r"(?i)from: ?<(.+)>").unwrap();
+    let re_smtp_rcpt = regex::Regex::new(r"(?i)to: ?<(.+)>").unwrap();
     let mut message = String::new();
     let mut state = SmtpState::Command;
     let mut mailfrom: Option<String> = None;
@@ -31,7 +34,7 @@ pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
                     }
                     "MAIL" => {
                         // Handle MAIL FROM command
-                        if let Some(address) = RE_SMTP_MAIL.captures(arg).and_then(|cap| cap.get(1))
+                        if let Some(address) = re_smtp_mail.captures(arg).and_then(|cap| cap.get(1))
                         {
                             mailfrom = Some(address.as_str().to_string());
                             send_commands(&mut framed, vec!["250 OK".to_string()]).await?;
@@ -51,19 +54,17 @@ pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
                                 vec!["503 Error: Send MAIL first".to_string()],
                             )
                             .await?;
+                        } else if let Some(address) =
+                            re_smtp_rcpt.captures(arg).and_then(|cap| cap.get(1))
+                        {
+                            rcpts.push(address.as_str().to_string());
+                            send_commands(&mut framed, vec!["250 OK".to_string()]).await?;
                         } else {
-                            if let Some(address) =
-                                RE_SMTP_RCPT.captures(arg).and_then(|cap| cap.get(1))
-                            {
-                                rcpts.push(address.as_str().to_string());
-                                send_commands(&mut framed, vec!["250 OK".to_string()]).await?;
-                            } else {
-                                send_commands(
-                                    &mut framed,
-                                    vec!["501 Syntax: RCPT TO: <address>".to_string()],
-                                )
-                                .await?;
-                            }
+                            send_commands(
+                                &mut framed,
+                                vec!["501 Syntax: RCPT TO: <address>".to_string()],
+                            )
+                            .await?;
                         }
                     }
                     "DATA" => {
@@ -100,18 +101,31 @@ pub async fn handle_session(mut stream: TcpStream) -> anyhow::Result<()> {
                 if line.trim() == "." {
                     // The end of the email content has been received
                     send_commands(&mut framed, vec!["250 OK".to_string()]).await?;
+
+                    // Log the received email
+                    tracing::info!(
+                        "Email received - From: {:?}, To: {:?}, Size: {} bytes",
+                        mailfrom,
+                        rcpts,
+                        message.len()
+                    );
+
+                    // Store the message if storage is available
+                    if let Some(ref storage) = storage {
+                        if let Some(ref from) = mailfrom {
+                            storage.store_message(from.clone(), rcpts.clone(), message.clone());
+                        }
+                    }
+
                     // reset the state and variables for the next email
                     mailfrom = None;
                     rcpts = Vec::new();
                     message = String::new();
                     state = SmtpState::Command;
-                    // we can now handle the email:
-                    //handle_email(mailfrom, rcpts, message);
-                    panic!()
                 } else {
                     // Add the received line to the email content
                     message.push_str(&line);
-                    message.push_str("\n");
+                    message.push('\n');
                 }
             }
             SmtpState::Quit => {

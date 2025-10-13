@@ -1,14 +1,13 @@
+use crate::{handle_starttls::handle_starttls, storage::MessageStorage};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
     net::TcpStream,
 };
 
-use crate::handle_starttls;
-
-async fn handle_unsecured_session(
-    reader: &mut BufReader<TcpStream>,
-    writer: &mut BufWriter<TcpStream>,
-) -> anyhow::Result<()> {
+pub async fn handle_unsecured_session(stream: &mut TcpStream, storage: Option<MessageStorage>) -> anyhow::Result<()> {
+    let (reader, writer) = stream.split();
+    let mut reader = BufReader::new(reader);
+    let mut writer = BufWriter::new(writer);
     let mut is_tls = false;
     let mut line = String::new();
     while reader.read_line(&mut line).await? != 0 {
@@ -53,6 +52,8 @@ async fn handle_unsecured_session(
     }
 
     if is_tls {
-        handle_starttls(stream).await?
+        handle_starttls(stream, storage).await?;
     }
+
+    Ok(())
 }
