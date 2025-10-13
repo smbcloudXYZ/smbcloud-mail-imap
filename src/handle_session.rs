@@ -1,4 +1,5 @@
 use crate::send_commands::send_commands;
+use crate::storage::MessageStorage;
 use futures::StreamExt;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{Framed, LinesCodec};
@@ -9,7 +10,7 @@ enum SmtpState {
     Quit,
 }
 
-pub async fn handle_session<S>(stream: S) -> anyhow::Result<()>
+pub async fn handle_session<S>(stream: S, storage: Option<MessageStorage>) -> anyhow::Result<()>
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
@@ -108,6 +109,13 @@ where
                         rcpts,
                         message.len()
                     );
+
+                    // Store the message if storage is available
+                    if let Some(ref storage) = storage {
+                        if let Some(ref from) = mailfrom {
+                            storage.store_message(from.clone(), rcpts.clone(), message.clone());
+                        }
+                    }
 
                     // reset the state and variables for the next email
                     mailfrom = None;
