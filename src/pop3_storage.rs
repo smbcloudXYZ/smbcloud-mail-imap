@@ -24,19 +24,26 @@ impl Pop3Message {
 #[derive(Debug, Clone)]
 pub struct Pop3Mailbox {
     messages: Arc<Mutex<HashMap<String, Vec<Pop3Message>>>>,
+    next_id: Arc<Mutex<HashMap<String, usize>>>,
 }
 
 impl Pop3Mailbox {
     pub fn new() -> Self {
         Self {
             messages: Arc::new(Mutex::new(HashMap::new())),
+            next_id: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
     pub fn add_message(&self, username: &str, content: String) {
         let mut messages = self.messages.lock().unwrap();
+        let mut next_id = self.next_id.lock().unwrap();
+        
         let user_messages = messages.entry(username.to_string()).or_insert_with(Vec::new);
-        let id = user_messages.len() + 1;
+        let id_counter = next_id.entry(username.to_string()).or_insert(1);
+        let id = *id_counter;
+        *id_counter += 1;
+        
         user_messages.push(Pop3Message::new(id, content));
     }
 
