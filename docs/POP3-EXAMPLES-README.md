@@ -5,7 +5,7 @@ This document provides a quick reference to all POP3 examples and documentation 
 ## 📚 Documentation Files
 
 ### Main Documentation
-- **[POP3.md](POP3.md)** (21KB) - Comprehensive POP3 protocol documentation
+- **[POP3.md](POP3.md)** - Comprehensive POP3 protocol documentation
   - Protocol basics and command reference
   - Setup and configuration guide
   - Integration with SMTP and IMAP
@@ -13,7 +13,7 @@ This document provides a quick reference to all POP3 examples and documentation 
   - Best practices
 
 ### Configuration
-- **[config-examples.md](config-examples.md)** (12KB) - Configuration examples
+- **[config-examples.md](config-examples.md)** - Configuration examples
   - Basic configurations for development
   - Production configurations with TLS
   - Database and LDAP authentication
@@ -21,7 +21,7 @@ This document provides a quick reference to all POP3 examples and documentation 
   - Environment-specific settings
 
 ### Testing
-- **[TESTING.md](TESTING.md)** (20KB) - Comprehensive testing guide
+- **[TESTING.md](TESTING.md)** - Comprehensive testing guide
   - Unit testing examples
   - Integration testing patterns
   - Mock testing strategies
@@ -30,7 +30,7 @@ This document provides a quick reference to all POP3 examples and documentation 
   - CI/CD setup
 
 ### Scenarios
-- **[SCENARIOS.md](SCENARIOS.md)** (24KB) - Real-world usage scenarios
+- **[SCENARIOS.md](SCENARIOS.md)** - Real-world usage scenarios
   - Basic email retrieval
   - Download and delete workflows
   - Selective message management
