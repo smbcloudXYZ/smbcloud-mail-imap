@@ -9,7 +9,7 @@ futures = "0.3"
 native-tls = "0.2"
 openssl = "0.10"
 regex = "1"
-tokio = { version = "1", features = [ "macros","io-util","net","rt", "rt-multi-thread"] }
+tokio = { version = "1", features = [ "macros","io-util","net","rt", "rt-multi-thread", "time"] }
 tokio-native-tls = "0.3"
 tokio-util = { version = "0.7", features = ["codec"] }
 tracing = "0.1"
