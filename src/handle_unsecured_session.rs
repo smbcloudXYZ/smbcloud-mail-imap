@@ -1,10 +1,10 @@
-use crate::{handle_starttls::handle_starttls, storage::MessageStorage};
+use crate::{handle_starttls::handle_starttls, storage::MessageStorage, mail_mode::MailMode};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
     net::TcpStream,
 };
 
-pub async fn handle_unsecured_session(stream: &mut TcpStream, storage: Option<MessageStorage>) -> anyhow::Result<()> {
+pub async fn handle_unsecured_session(stream: &mut TcpStream, storage: Option<MessageStorage>, mode: MailMode) -> anyhow::Result<()> {
     let (reader, writer) = stream.split();
     let mut reader = BufReader::new(reader);
     let mut writer = BufWriter::new(writer);
@@ -52,7 +52,7 @@ pub async fn handle_unsecured_session(stream: &mut TcpStream, storage: Option<Me
     }
 
     if is_tls {
-        handle_starttls(stream, storage).await?;
+        handle_starttls(stream, storage, mode).await?;
     }
 
     Ok(())

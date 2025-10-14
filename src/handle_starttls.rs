@@ -1,9 +1,9 @@
-use crate::{generate_certificate::generate_certificate, handle_session::handle_session, storage::MessageStorage};
+use crate::{generate_certificate::generate_certificate, handle_session::handle_session, storage::MessageStorage, mail_mode::MailMode};
 use native_tls::{Identity, TlsAcceptor};
 use tokio::net::TcpStream;
 use tokio_native_tls::TlsAcceptor as TokioTlsAcceptor;
 
-pub async fn handle_starttls(stream: &mut TcpStream, storage: Option<MessageStorage>) -> anyhow::Result<()> {
+pub async fn handle_starttls(stream: &mut TcpStream, storage: Option<MessageStorage>, mode: MailMode) -> anyhow::Result<()> {
     // ideally the certificate should only be loaded from here and not generated each time
     let (pem_certificate, pem_private_key) = generate_certificate()?;
     let identity = Identity::from_pkcs8(pem_certificate.as_bytes(), pem_private_key.as_bytes())?;
@@ -13,7 +13,7 @@ pub async fn handle_starttls(stream: &mut TcpStream, storage: Option<MessageStor
     match tls_acceptor.accept(stream).await {
         Ok(tls_stream) => {
             // we can now handle the normal SMTP session
-            handle_session(tls_stream, storage).await?;
+            handle_session(tls_stream, storage, mode).await?;
         }
         Err(e) => {
             tracing::error!("Error establishing SMTP TLS connection: {:?}", e);

@@ -1,5 +1,6 @@
 use crate::send_commands::send_commands;
 use crate::storage::MessageStorage;
+use crate::mail_mode::MailMode;
 use futures::StreamExt;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{Framed, LinesCodec};
@@ -10,7 +11,7 @@ enum SmtpState {
     Quit,
 }
 
-pub async fn handle_session<S>(stream: S, storage: Option<MessageStorage>) -> anyhow::Result<()>
+pub async fn handle_session<S>(stream: S, storage: Option<MessageStorage>, mode: MailMode) -> anyhow::Result<()>
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
@@ -102,18 +103,34 @@ where
                     // The end of the email content has been received
                     send_commands(&mut framed, vec!["250 OK".to_string()]).await?;
 
-                    // Log the received email
-                    tracing::info!(
-                        "Email received - From: {:?}, To: {:?}, Size: {} bytes",
-                        mailfrom,
-                        rcpts,
-                        message.len()
-                    );
+                    // Handle message based on mode
+                    match mode {
+                        MailMode::Receive => {
+                            // Log the received email
+                            tracing::info!(
+                                "Email received - From: {:?}, To: {:?}, Size: {} bytes",
+                                mailfrom,
+                                rcpts,
+                                message.len()
+                            );
 
-                    // Store the message if storage is available
-                    if let Some(ref storage) = storage {
-                        if let Some(ref from) = mailfrom {
-                            storage.store_message(from.clone(), rcpts.clone(), message.clone());
+                            // Store the message in INBOX if storage is available
+                            if let Some(ref storage) = storage {
+                                if let Some(ref from) = mailfrom {
+                                    storage.store_message(from.clone(), rcpts.clone(), message.clone());
+                                }
+                            }
+                        }
+                        MailMode::Submit => {
+                            // Log the outbound mail relay
+                            tracing::info!(
+                                "Outbound mail relay - From: {:?}, To: {:?}, Size: {} bytes",
+                                mailfrom,
+                                rcpts,
+                                message.len()
+                            );
+                            // In a real implementation, this would relay the message to external servers
+                            // For now, we just log the submission
                         }
                     }
 
