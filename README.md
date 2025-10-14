@@ -10,6 +10,7 @@ A basic SMTP and IMAP server implementation in Rust with TLS/STARTTLS support.
 - ✅ Self-signed certificate generation for TLS
 - ✅ Multiple recipient support
 - ✅ Command validation and error handling
+- ✅ Dual-mode operation: separate ports for incoming and outgoing mail
 
 ### IMAP
 - ✅ IMAP4rev1 protocol implementation
@@ -31,7 +32,11 @@ A basic SMTP and IMAP server implementation in Rust with TLS/STARTTLS support.
 cargo run
 ```
 
-The SMTP server listens on `127.0.0.1:2525` and the IMAP server listens on `127.0.0.1:1143` by default.
+The SMTP server listens on two ports:
+- `127.0.0.1:2525` - **Receive mode**: For incoming mail from other servers (messages stored in INBOX)
+- `127.0.0.1:2526` - **Submit mode**: For outgoing mail submission from clients (messages logged and relayed)
+
+The IMAP server listens on `127.0.0.1:1143` by default.
 
 ## Testing
 
@@ -39,8 +44,14 @@ The SMTP server listens on `127.0.0.1:2525` and the IMAP server listens on `127.
 
 You can test the SMTP server using `nc` (netcat) or `telnet`:
 
+**Testing receive mode (port 2525):**
 ```bash
 echo -e "EHLO test.com\r\nMAIL FROM: <sender@example.com>\r\nRCPT TO: <recipient@example.com>\r\nDATA\r\nSubject: Test\r\n\r\nTest message\r\n.\r\nQUIT\r\n" | nc localhost 2525
+```
+
+**Testing submit mode (port 2526):**
+```bash
+echo -e "EHLO test.com\r\nMAIL FROM: <sender@example.com>\r\nRCPT TO: <recipient@example.com>\r\nDATA\r\nSubject: Outgoing Test\r\n\r\nOutgoing message\r\n.\r\nQUIT\r\n" | nc localhost 2526
 ```
 
 ### Testing IMAP
