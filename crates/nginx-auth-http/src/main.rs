@@ -1,77 +1,146 @@
-use base64::{engine::general_purpose, Engine as _};
 use std::collections::HashMap;
-use std::io::prelude::*;
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
 struct AuthServer {
     users: HashMap<String, String>,
+    upstream_host: String,
+    smtp_port: u16,
+    imap_port: u16,
 }
 
 impl AuthServer {
     fn new() -> Self {
         let mut users = HashMap::new();
+        // TODO: replace with secure storage (DB/KMS). This is only a demo.
         users.insert("admin".to_string(), "your_admin_password".to_string());
         users.insert("user".to_string(), "your_user_password".to_string());
 
-        AuthServer { users }
+        AuthServer {
+            users,
+            upstream_host: "127.0.0.1".to_string(),
+            smtp_port: 2525, // Your smbcloud-mail-smtp SMTP server
+            imap_port: 1143, // Your smbcloud-mail-smtp IMAP server
+        }
     }
 
-    fn handle_request(&self, mut stream: TcpStream) {
-        let mut buffer = [0; 1024];
-        stream.read(&mut buffer).unwrap();
-
-        let request = String::from_utf8_lossy(&buffer[..]);
-        let lines: Vec<&str> = request.lines().collect();
-
-        // Find Authorization header
-        let auth_header = lines
-            .iter()
-            .find(|line| line.to_lowercase().starts_with("authorization:"))
-            .map(|line| line.split_once(": ").unwrap_or(("", "")).1);
-
-        let response = if let Some(auth) = auth_header {
-            if auth.starts_with("Basic ") {
-                match self.validate_credentials(&auth[6..]) {
-                    true => "HTTP/1.1 200 OK\r\n\r\n",
-                    false => "HTTP/1.1 401 Unauthorized\r\n\r\n",
-                }
-            } else {
-                "HTTP/1.1 401 Unauthorized\r\n\r\n"
-            }
-        } else {
-            "HTTP/1.1 401 Unauthorized\r\n\r\n"
+    fn handle_client(&self, mut stream: TcpStream) {
+        let Ok((method, _path, headers)) = read_http_request(&mut stream) else {
+            let _ = stream.write_all(b"HTTP/1.1 500 Internal Server Error\r\n\r\n");
+            let _ = stream.flush();
+            return;
         };
 
-        stream.write_all(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-    }
+        if method != "GET" && method != "POST" {
+            let _ = stream.write_all(b"HTTP/1.1 405 Method Not Allowed\r\n\r\n");
+            let _ = stream.flush();
+            return;
+        }
 
-    fn validate_credentials(&self, encoded_creds: &str) -> bool {
-        if let Ok(decoded) = general_purpose::STANDARD.decode(encoded_creds) {
-            if let Ok(creds_str) = String::from_utf8(decoded) {
-                if let Some((username, password)) = creds_str.split_once(':') {
-                    return self.users.get(username).map_or(false, |p| p == password);
+        let method_hdr = get_hdr(&headers, "auth-method").unwrap_or("plain");
+        let user = get_hdr(&headers, "auth-user").unwrap_or("");
+        let pass = get_hdr(&headers, "auth-pass").unwrap_or("");
+        let proto = get_hdr(&headers, "auth-protocol").unwrap_or("smtp");
+
+        // Validate credentials
+        let mut ok = false;
+        if method_hdr.eq_ignore_ascii_case("plain") {
+            if !user.is_empty() && !pass.is_empty() {
+                if let Some(stored) = self.users.get(user) {
+                    ok = stored == pass;
                 }
             }
         }
-        false
+
+        if ok {
+            let (host, port) = match proto {
+                p if p.eq_ignore_ascii_case("smtp") => (&self.upstream_host, self.smtp_port),
+                p if p.eq_ignore_ascii_case("imap") => (&self.upstream_host, self.imap_port),
+                _ => (&self.upstream_host, self.smtp_port),
+            };
+
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\n\
+                 Auth-Status: OK\r\n\
+                 Auth-Server: {host}\r\n\
+                 Auth-Port: {port}\r\n\
+                 Auth-User: {user}\r\n\
+                 Auth-Wait: 0\r\n\
+                 \r\n"
+            );
+            let _ = stream.write_all(resp.as_bytes());
+            let _ = stream.flush();
+        } else {
+            let resp =
+                "HTTP/1.1 200 OK\r\nAuth-Status: Invalid login or password\r\nAuth-Wait: 2\r\n\r\n";
+            let _ = stream.write_all(resp.as_bytes());
+            let _ = stream.flush();
+        }
     }
 }
 
-fn main() {
-    let auth_server = AuthServer::new();
-    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+fn get_hdr<'a>(headers: &'a Vec<(String, String)>, name: &str) -> Option<&'a str> {
+    headers
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case(name))
+        .map(|(_, v)| v.as_str())
+}
 
-    println!("Auth server running on port 8080");
+fn read_http_request(
+    stream: &mut TcpStream,
+) -> Result<(String, String, Vec<(String, String)>), ()> {
+    let mut buf = Vec::with_capacity(4096);
+    let mut tmp = [0u8; 1024];
+    loop {
+        let n = stream.read(&mut tmp).map_err(|_| ())?;
+        if n == 0 {
+            break;
+        }
+        buf.extend_from_slice(&tmp[..n]);
+        if memchr_crlfcrlf(&buf) {
+            break;
+        }
+        if buf.len() > 64 * 1024 {
+            break;
+        }
+    }
+
+    let req = String::from_utf8_lossy(&buf);
+    let mut lines = req.split("\r\n");
+
+    let req_line = lines.next().ok_or(())?;
+    let mut parts = req_line.split_whitespace();
+    let method = parts.next().unwrap_or("").to_string();
+    let path = parts.next().unwrap_or("/").to_string();
+
+    let mut headers = Vec::new();
+    for line in lines {
+        if line.is_empty() {
+            break;
+        }
+        if let Some((k, v)) = line.split_once(':') {
+            headers.push((k.trim().to_string(), v.trim().to_string()));
+        }
+    }
+    Ok((method, path, headers))
+}
+
+fn memchr_crlfcrlf(buf: &[u8]) -> bool {
+    buf.windows(4).any(|w| w == b"\r\n\r\n")
+}
+
+fn main() -> std::io::Result<()> {
+    let auth = AuthServer::new();
+    let listener = TcpListener::bind("127.0.0.1:8080")?;
+    eprintln!("Mail auth_http server listening on 127.0.0.1:8080");
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                auth_server.handle_request(stream);
+                auth.handle_client(stream);
             }
-            Err(e) => {
-                println!("Error: {}", e);
-            }
+            Err(e) => eprintln!("accept error: {e}"),
         }
     }
+    Ok(())
 }
