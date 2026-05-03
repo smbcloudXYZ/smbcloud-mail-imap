@@ -1,3 +1,6 @@
+[workspace]
+members = ["./crates/*"]
+
 [package]
 name = "smbcloud-mail"
 version = "1.0.0"

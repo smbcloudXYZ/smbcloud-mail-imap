@@ -6,6 +6,9 @@ from email.mime.text import MIMEText
 
 smtp_server = "localhost"
 smtp_port = 2525
+smtp_username = "your_username"  # Add your SMTP username here
+smtp_password = "your_password"  # Add your SMTP password here
+
 from_email = "you@example.com"
 to_email = "to@example.com"
 subject = "Test Email"
@@ -37,6 +40,9 @@ with open(file_path, "rb") as attachment:
 try:
     with smtplib.SMTP(smtp_server, smtp_port) as server:
         _ = server.starttls()
+        _ = server.login(
+            smtp_username, smtp_password
+        )  # Add this line for authentication
         _ = server.sendmail(from_email, to_email, message.as_string())
     print("Email sent successfully")
 except Exception as e:
