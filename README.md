@@ -24,7 +24,7 @@
   <summary>Mail</summary>
 
   <p align="center">
-    <img src="./assets/Mail-is-Mail.png" alt="smbCloud Mail preview" width="860">
+    <img src="./assets/Mail-is-Mail.png" alt="smbCloud Mail email service provider gmail protonmail outlook alternative" width="260">
   </p>
 
 </details>
