@@ -1,5 +1,5 @@
 use anyhow::Result;
-use smbcloud_mail::{listen::listen, storage::MessageStorage};
+use smbcloud_mail_imap::{listen::listen, storage::MessageStorage};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -8,13 +8,13 @@ async fn main() -> Result<()> {
 
     // Create shared message storage
     let storage = MessageStorage::new();
-    
+
     // Clone storage for IMAP server
     let imap_storage = storage.clone();
-    
+
     // Start IMAP server in a separate task
     tokio::spawn(async move {
-        if let Err(err) = smbcloud_mail::imap::listen::listen(imap_storage.mailbox_store).await {
+        if let Err(err) = smbcloud_mail_imap::imap::listen::listen(imap_storage.mailbox_store).await {
             tracing::error!("IMAP server error: {:?}", err);
         }
     });
