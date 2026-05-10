@@ -18,7 +18,7 @@
 
 ## About
 
-**`smbcloud-mail-imap`** is the IMAP server for [smbCloud Mail](https://smbcloud.xyz/services).
+**`smbcloud-mail-imap`** is the IMAP server for [smbCloud Mail](https://smbcloud.xyz/services). Claim your [three-letter free email address](https://console.smbcloud.xyz/signup-mailx).
 
 <details>
   <summary>Mail</summary>
