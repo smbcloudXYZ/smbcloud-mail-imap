@@ -2,7 +2,7 @@
 members = ["./crates/*"]
 
 [package]
-name = "smbcloud-mail"
+name = "smbcloud-mail-imap"
 version = "1.0.0"
 edition = "2021"
 
